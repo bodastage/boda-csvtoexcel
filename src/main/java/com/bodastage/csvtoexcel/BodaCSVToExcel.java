@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -15,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import javax.xml.stream.XMLStreamException;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 /*
@@ -54,9 +56,7 @@ public class BodaCSVToExcel {
      * @since 1.0.0
      */
     private String dataFile;
-    
-    
-    private XSSFWorkbook workbook = new XSSFWorkbook();
+   
     
     /**
      * Parser start time. 
@@ -101,7 +101,8 @@ public class BodaCSVToExcel {
         System.out.println("Usage: java -jar boda-csvtoexcel.jar <inputDirectory> outputFile.xlsx");
     }
     
-    public void createWorkBook() throws UnsupportedEncodingException, IOException{
+    //@TODO: Handle better
+    public void createWorkBook() throws UnsupportedEncodingException, IOException, FileNotFoundException, InvalidFormatException{
         processFileOrDirectory();
     }
     /**
@@ -114,7 +115,7 @@ public class BodaCSVToExcel {
    }
    
 public void processFileOrDirectory()
-            throws FileNotFoundException, UnsupportedEncodingException, IOException {
+            throws FileNotFoundException, UnsupportedEncodingException, IOException, InvalidFormatException {
         //this.dataFILe;
         Path file = Paths.get(this.dataSource);
         boolean isRegularExecutableFile = Files.isRegularFile(file)
@@ -139,6 +140,7 @@ public void processFileOrDirectory()
             File[] fList = directory.listFiles();
 
             for (File f : fList) {
+                
                 this.setFileName(f.getAbsolutePath());
                 try {
                    
@@ -153,16 +155,6 @@ public void processFileOrDirectory()
                 }
             }
 
-        }
-        
-        try {
-            FileOutputStream outputStream = new FileOutputStream(this.outputFilename);
-            workbook.write(outputStream);
-            workbook.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         
 
@@ -183,8 +175,16 @@ public void processFileOrDirectory()
      * @since 1.0.0
      * @param filename 
      */
-    public void addFileToWorkBook(String filename) throws FileNotFoundException, IOException{
-        XSSFSheet sheet = this.workbook.createSheet(getFilenameMinusExtension(filename));
+    public void addFileToWorkBook(String filename) 
+            throws FileNotFoundException, IOException, InvalidFormatException{
+        XSSFWorkbook workbook;
+        if( new File(this.outputFilename).exists()){
+            workbook = new XSSFWorkbook(new FileInputStream(this.outputFilename));
+        }else{
+            workbook = new XSSFWorkbook();
+        }
+        
+        XSSFSheet sheet = workbook.createSheet(getFilenameMinusExtension(filename));
         CSVReader reader = new CSVReader(new FileReader(filename));
      String [] nextLine;
 	 Integer rowNum = 0;
@@ -200,6 +200,11 @@ public void processFileOrDirectory()
 			}
 		}
     }
+     
+            FileOutputStream outputStream = new FileOutputStream(this.outputFilename);
+            workbook.write(outputStream);
+            workbook.close();
+        
     }
     /**
      * Set the output directory.
